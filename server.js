@@ -8,27 +8,24 @@ const wss = new WebSocket.Server({ port: 8080, clientTracking: true });
 //Zeit Formattierung laden: [5, 13, 22] => 05:13:22
 const timelite = require('timelite');
 
-//Filesystem und Path Abfragen fuer Playlist
 const fs = require('fs-extra');
-const glob = require("glob");
 const path = require('path');
 const arrayMove = require('array-move');
-
-//Befehle auf Kommandzeile ausfuehren
 const { execSync } = require('child_process');
 
 //Aus Config auslesen wo die Video-Dateien liegen
-const configFile = fs.readJsonSync(__dirname + '/config.json');
-const videoDir = configFile["videoDir"];
+const config = fs.readJsonSync(__dirname + '/config.json');
+const videoFilesDir = config.videoDir + "/wvp/mp4";
+const jsonDir = config.videoDir + "/wvp/json";
 
 //Wo liegen die Symlinks auf die Videos
-const symlinkDir = "/home/pi/mh_prog/symlinkDir";
+const symlinkDir = config.symlinkDir;
 
 //Symlink Verzeichnis leeren
 fs.emptyDirSync(symlinkDir);
 
 //Zeit wie lange bis Shutdown durchgefuhert wird bei Inaktivitaet
-const countdownTime = configFile["countdownTime"];
+const countdownTime = config.countdownTime;
 var countdownID = null;
 
 //Aktuelle Infos zu Volume, etc. merken, damit Clients, die sich spaeter anmelden, diese Info bekommen
@@ -57,6 +54,7 @@ setTimeout(() => {
 startCountdown();
 
 //Anzahl der Sekunden des aktuellen Tracks
+//TODO: check var vs. let
 var trackTotalTime = 0;
 
 //Summe der h, m, s der Dateien, die Playlist nach aktueller Position kommen
@@ -122,7 +120,7 @@ wss.on('connection', function connection(ws) {
                 console.log("playlist total length: " + data["filesTotalTime"]);
 
                 //nummerierten Symlink erstellen
-                const srcpath = videoDir + "/" + value.file;
+                const srcpath = videoFilesDir + "/" + value.file;
                 const dstpath = symlinkDir + "/" + nextIndex + "-" + path.basename(value.file);
                 fs.ensureSymlinkSync(srcpath, dstpath);
 
@@ -299,8 +297,6 @@ wss.on('connection', function connection(ws) {
 
     //Ueber Messages gehen, die an Clients geschickt werden
     WSConnectMessageArr.forEach(message => {
-
-        //Message-Object erzeugen und an Client schicken
         const messageObj = {
             "type": message,
             "value": data[message]
@@ -328,22 +324,22 @@ function sendClientInfo(messageArr) {
 function getMainJSON() {
 
     //In Videolist sind Infos ueber Modes und Filter
-    const jsonObj = fs.readJSONSync(configFile["jsonDir"] + "/videolist.json");
+    const jsonObj = fs.readJSONSync(jsonDir + "/videolist.json");
 
     //Array, damit auslesen der einzelnen Unter-JSONs (bibi-tina.json, bobo.json) parallel erfolgen kann
-    let modeDataFileArr = [];
+    const modeDataFileArr = [];
 
     //Ueber Modes gehen (hsp, kindermusik, musikmh)
     for (let [mode, modeData] of Object.entries(jsonObj)) {
 
         //merken, welche Filter geloescht werden sollen
-        let inactiveFilters = [];
+        const inactiveFilters = [];
 
         //Ueber Filter des Modus gehen (bibi-tina, bobo,...)
         modeData["filter"]["filters"].forEach((filterData, index) => {
 
             //filterID merken (bibi-tina, bobo)
-            let filterID = filterData["id"];
+            const filterID = filterData["id"];
 
             //All-Filter wird immer angezeigt -> "active" loeschen (wird nicht fuer die Oberflaeche benoetigt)
             if (filterID === "all") {
@@ -358,7 +354,7 @@ function getMainJSON() {
                 delete jsonObj[mode]["filter"]["filters"][index]["active"];
 
                 //JSON dieses Filters holen (z.B. bibi-tina.json)
-                const jsonLink = configFile["jsonDir"] + "/" + mode + "/" + filterID + ".json";
+                const jsonLink = jsonDir + "/" + mode + "/" + filterID + ".json";
                 modeData = {
                     data: fs.readJSONSync(jsonLink),
                     filterID: filterID,
@@ -377,31 +373,29 @@ function getMainJSON() {
 
         //Ueber inaktive Filter gehen und aus JSON-Obj loeschen
         inactiveFilters.forEach(filter => {
-            let filterIndex = jsonObj[mode]["filter"]["filters"].indexOf(filter);
+            const filterIndex = jsonObj[mode]["filter"]["filters"].indexOf(filter);
             jsonObj[mode]["filter"]["filters"].splice(filterIndex, 1);
         });
-
-        //Ueber die Treffer (JSON-files) gehen
-        modeDataFileArr.forEach(result => {
-
-            //Ueber Daten (z.B. einzelne Video items) gehen
-            result["data"].forEach(modeItem => {
-
-                //Wenn Playlist aktiv ist
-                if (modeItem["active"]) {
-
-                    //Feld "active" loeschen
-                    delete modeItem["active"];
-
-                    //Modus einfuegen (damit Filterung in Oberflaeche geht)
-                    modeItem["mode"] = result["filterID"];
-
-                    //Playlist-Objekt in Ausgabe Objekt einfuegen
-                    jsonObj[result["mode"]]["items"].push(modeItem);
-                }
-            });
-        });
     }
+
+    //Ueber die Treffer (JSON-files) gehen
+    modeDataFileArr.forEach(result => {
+
+        //Ueber Daten (z.B. einzelne Video items) gehen
+        result["data"].forEach(modeItem => {
+
+            //Wenn Video inaktiv ist, dieses nicht in Liste einfuegen
+            if (modeItem["inactive"]) {
+                return;
+            }
+
+            //Modus einfuegen (damit Filterung in Oberflaeche geht)
+            modeItem["mode"] = result["filterID"];
+
+            //Playlist-Objekt in Ausgabe Objekt einfuegen
+            jsonObj[result["mode"]]["items"].push(modeItem);
+        });
+    });
 
     //Wert merken, damit er an Clients uebergeben werden kann
     data["mainJSON"] = jsonObj;

@@ -4,11 +4,10 @@
   "description": "socket.io server",
   "dependencies": {
     "array-move": "^3.0.1",
-    "fs-extra": "^9.0.1",
-    "glob": "^7.1.6",
+    "fs-extra": "^10.0.0",
     "omxplayer-controll": "^0.2.0",
     "timelite": "1.0.0",
-    "ws": "^7.4.0"
+    "ws": "^8.2.2"
   },
   "license": "GPL-3.0-or-later",
   "repository": {
