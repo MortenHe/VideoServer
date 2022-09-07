@@ -1,5 +1,5 @@
 {
-    "videoDir": "/media/pi/usb_red/Nextcloud/Raspi/files/video",
+    "videoDir": "/media/usb_red/Nextcloud/Raspi/video",
     "symlinkDir": "/home/pi/mh_prog/symlinkDir",
     "countdownTime": 180
 }
