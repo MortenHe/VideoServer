@@ -1,4 +1,5 @@
 {
+    "videoDir": "/mnt/c/Users/helfer/Desktop/Nextcloud/Raspi/video",
     "symlinkDir": "/home/pi/mh_prog/symlinkDir",
     "countdownTime": 180
 }
