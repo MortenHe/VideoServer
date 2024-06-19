@@ -7,7 +7,7 @@
     "fs-extra": "^10.0.0",
     "omxplayer-controll": "^0.2.0",
     "timelite": "1.0.0",
-    "ws": "^8.2.2"
+    "ws": "^8.17.1"
   },
   "license": "GPL-3.0-or-later",
   "repository": {
