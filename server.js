@@ -568,7 +568,7 @@ function updatePlaylistTimes() {
     }
 
     //Laenge der Files aufsummieren, die nach aktueller Position kommen
-    followingTracksTimeString = timelite.time.str(timelite.time.add(
+    const followingTracksTimeString = timelite.time.str(timelite.time.add(
         data["files"]
             .filter((file, pos) => pos > data["position"])
             .map(file => file["length"])));
@@ -579,21 +579,12 @@ function updatePlaylistTimes() {
 
 //Aus Sekundenzahl Timelite Array [h, m, s] bauen
 function generateTimeliteStringFromSeconds(secondsTotal) {
+    if (secondsTotal <= 0) return timelite.time.str([0, 0, 0]);
 
-    //Variablen setzen, falls noch kein sinnvoller Wert geliefert wird
-    let hours = 0;
-    let minutes = 0;
-    let seconds = 0;
+    const hours = Math.floor(secondsTotal / 3600);
+    const minutes = Math.floor((secondsTotal % 3600) / 60);
+    const seconds = secondsTotal % 60;
 
-    //Wenn OMX sinnvolle Werte liefern, Umrechung der Sekunden in [h, m, s] fuer formattierte Darstellung
-    if (secondsTotal > 0) {
-        hours = Math.floor(secondsTotal / 3600);
-        secondsTotal %= 3600;
-        minutes = Math.floor(secondsTotal / 60);
-        seconds = secondsTotal % 60;
-    }
-
-    //h, m, s-Werte in Array packen
     return timelite.time.str([hours, minutes, seconds]);
 }
 
